@@ -13,7 +13,14 @@ Teddybears picnic  //linpeas first then others
 Linux Exploit Suggester - https://github.com/mzet-/linux-exploit-suggester  
 Try run this if nothing on linpeas !!  suggests potential cve's – meterpreter can auto exploit - load suggester !  
 
-#### Kernel Exploits:  Kernel is an interface between software and hardware.  
+### Enumeration/Info Gathering
+Check teddy  
+
+
+
+
+
+### Kernel Exploits:  Kernel is an interface between software and hardware.  
 Note: Kernel exploits can cause system instability so use caution when running these against a production system.  
 And some work out of the box and some require modification.  Google kernel/OS version to find any ..  
 uname -a   //print kernel version
