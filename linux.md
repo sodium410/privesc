@@ -32,7 +32,7 @@ When the sudo command is issued, the system will check if the user issuing the c
 always check to see if the current user has any sudo privileges.  
 If NOPASSWD - then no password, otherwise user pass required to run sudo rights  
 sudo -l   //sudo el to list sudp privs  //use gtfobins to check if any can be exploited to escape to shell  
-#### via intended functionality  
+#### Via Intended functionality  
 if nothing on gtfobins for sudo listed binaries, its still possible to escalate with thier intended functionalities  
 examples: wget to read/post shadow file, apache2 to read shadow file  -- just google  
 #### Via LD_PRELOAD  
@@ -44,7 +44,7 @@ CVE-2019-14287: sudo before 1.8.28 vulnerable to  if allowed to execute all exce
 hacker ALL=(ALL,!root) /bin/bash  //can run bash except as root  
 – user can trick sudo to still run as root !! Check https://www.exploit-db.com/exploits/47502  
 CVE-2019-18634: Sudo versions prior to 1.8.26  – buffer overflow vulnerabilty  
- * as we type password - only when pwfeedback is enabled   
+asterisk * as we type password - only when pwfeedback is enabled   
 check if pwfeedback enabled in /etc/sudoers - then can be exploited !! if cat't read /etc/sudoers still ok to give a shot       
 https://github.com/saleemrashid/sudo-cve-2019-18634  
 #### Sudoers best practice:  
