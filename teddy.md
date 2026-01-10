@@ -161,4 +161,5 @@ find / -name \*.sh 2>/dev/null | xargs cat | grep "HTB"     //find flag HTB in .
 **echo "Recruiting Capability Teddies"**  
 **#capability hunting**  
 getcap -r / 2>/dev/null  //capabilities_BIN  
+find /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin -type f -exec getcap {} \\;  //of files only in those paths  
 cat /etc/security/capability.conf | grep Cap  //capabilities_USER  
