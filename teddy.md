@@ -84,6 +84,7 @@ cat /etc/crontab  //system wide crons
 sudo ls -al /var/spool/cron/  --other user jobs  
 then cat it - sudo cat /var/spool/cron/adm_wsi --cron job of user  
 crontab -l   //of current user  
+/etc/cron.d   //check any writable files in this dir  
 
 for all users: GET INTO BASH SUDO THEN RUN BELOW OR EVEN WITHOUT   
 for user in $(cut -f1 -d: /etc/passwd); do  
