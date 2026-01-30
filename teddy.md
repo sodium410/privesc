@@ -112,6 +112,7 @@ ls -alR /root
 **#Check For Poor File Perms**  
 find / -perm -4000 -type f 2>/dev/null -ls  //suid  
 find / -perm -2000 -type f 2>/dev/null -ls  //sgid  
+find / -perm -1000 -type d 2>/dev/null   //sticky bit set directories  
 find / -nouser 2>/dev/null -ls  //file not owned by any user  
 find / -nogroup 2>/dev/null -ls  //no_group.txt  
 
@@ -164,3 +165,9 @@ find / -name \*.sh 2>/dev/null | xargs cat | grep "HTB"     //find flag HTB in .
 getcap -r / 2>/dev/null  //capabilities_BIN  
 find /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin -type f -exec getcap {} \\;  //of files only in those paths  
 cat /etc/security/capability.conf | grep Cap  //capabilities_USER  
+
+**NFS**  
+cat /etc/exports    -- to verify nfs config  -no root squash  
+https://steflan-security.com/linux-privilege-escalation-exploiting-nfs-shares/  
+
+
