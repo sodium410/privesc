@@ -170,4 +170,9 @@ cat /etc/security/capability.conf | grep Cap  //capabilities_USER
 cat /etc/exports    -- to verify nfs config  -no root squash  
 https://steflan-security.com/linux-privilege-escalation-exploiting-nfs-shares/  
 
+ptrace sudo inject  
+sysctl kernel.yama.ptrace_scope   //0 is good 1 is bad  
+
+
+
 
