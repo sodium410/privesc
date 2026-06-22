@@ -269,6 +269,37 @@ so like before we set the env variable from where to load modules from and pass 
  sudo PYTHONPATH=/tmp/ /usr/bin/python3 ./mem_status.py  
 simply copy the earlier module malicious module into /tmp and run the script  
 
+## Recent 0-Days  
+### 1. Sudo  sudo -u someuser /bin/bash  -- if no user specified to be run as then root is the default  
+/etc/sudoers file specifies which users/groups are allowed to run specific programs and with what privileges  
+CVE-2021-3156 -- heap based buffer overflow that affects sudo versions  -- lInpeas can detect this..  
+sudo -V | head -n1  //to check sudo version  
+present for over 10 years with public POC  
+
+CVE-2019-14287 -- affecting sudo versions below 1.8.28 privesc with a simple command - Linpeas can catch it  
+only a single prerequisite. It had to allow a user in the /etc/sudoers file to execute a specific command.  
+
+### 2. Polkit  
+policykit is an authorization service  
+pkexec part of polkit similar to sudo that runs a program with rights of other user or with root  
+pkexec -u root id  
+Memory corruption vuln CVE-2021-4034 also known as pwnkit, was hidden for more than 10 years  
+Download POC compile it on the target 
+
+### 3. Dirty Pipe - CVE-2022-0847 -- Linpeas  
+similar to dirtycow affects All kernels from version 5.8 to 5.17   
+
+### 4. Netfilter  
+is a linux kernel module that provides packer filtering, NAT, includes iptables - firewall and arptables  
+CVE-2021-22555, CVE-2022-1015, CVE-2023-32233  affecting muliple kernel versions -- linpeas will find it  
+use the poc exploits, can be unstable and can break the system  
+
+## Linux Hardening...  
+Lynix for automated audit  
+checks sudoers, world writable files/folders, patches, users/groups, running services, ssh  
+
+
+
 
 
  
