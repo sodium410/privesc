@@ -298,6 +298,12 @@ use the poc exploits, can be unstable and can break the system
 Lynix for automated audit  
 checks sudoers, world writable files/folders, patches, users/groups, running services, ssh  
 
+Assessment flow...  
+flag1 - hidden within .config of given user htb-student  
+flag2 -- within home direc of barry user whose creds leaked in history  
+flag3 -- barry is part of adm group can reac /var/log/flag3.txt  
+flag4 -- checking services find tomcat on 8080, tomcat manager pass found in confg file, login and upload malicious war file to get reverse shell as tomcat user  
+flag5 -- tomcat user can run a program as sudo which is vuln to shell escape  
 
 
 
