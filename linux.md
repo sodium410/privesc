@@ -248,7 +248,8 @@ has the standard library on board from a standard installation
 import pandas  // from pandas import *  //from pandas import Series  
 there are three basic vulnerabilities where hijacking can be used, depending on the script and its contents.  
 #### Wrong write permissions  
-ls -l test.py    //has sudo/suid bit set run as root //read the file 
+ls -l test.py    //has sudo/suid bit set run as root  
+this is the root cause here pythod code run as root when this is run and imports something it will automatically get elevated rights //read the file 
 read reveals it loads a module named psutil and calls function virtual_memory()  
 grep -r "def virtual_memory" /usr/local/lib/python3.8/dist-packages/psutil/*  //find code with the function in the module  
 ___init___.py is writable file  //just put below at the beginging of the functions in htis case virtual_memory()  
@@ -257,3 +258,17 @@ ___init___.py is writable file  //just put below at the beginging of the functio
 	os.system('id')
 Now run the script and should get root id  
 #### Library path  
+In python each versin has a specified order in which libraries/modules are searched and imported. 
+meaning paths higher on the list take priority over lower on the list  
+python3 -c 'import sys; print("\n".join(sys.path))'  //lists the order of paths  
+To exploit: module imported by the script should be located under one of the low priority paths and we must have write perms to higher path on the list  
+So here again the script was run as root/sid/sgid or python can be run as sudo, so check the path of the module and then place a file in high priority path  
+#### PYTHONPATH Environment Variable  
+sudo -l allows to run python as sudo with SETENV  
+so like before we set the env variable from where to load modules from and pass it to script file  
+ sudo PYTHONPATH=/tmp/ /usr/bin/python3 ./mem_status.py  
+simply copy the earlier module malicious module into /tmp and run the script  
+
+
+
+ 
